@@ -62,6 +62,9 @@ public class XML {
     /** The Character '/'. */
     public static final Character SLASH = new Character('/');
 
+    /** the attribute name of the JSON type if included **/
+    public static final String TYPE_ATTRIB = "jsonType";
+    
     /**
      * Replace special characters with XML escapes:
      * <pre>
@@ -125,7 +128,7 @@ public class XML {
      * @throws JSONException
      */
     private static boolean parse(XMLTokener x, JSONObject context,
-                                 String name) throws JSONException {
+                                 String name, boolean typed) throws JSONException {
         char       c;
         int        i;
         String     n;
@@ -238,7 +241,17 @@ public class XML {
                     if (x.nextToken() != GT) {
                         throw x.syntaxError("Misshaped tag");
                     }
-                    context.accumulate(n, o);
+                    // before adding, clear out TYPE_ATTRIB
+                    if (typed) {
+                      String type = (String)o.remove(TYPE_ATTRIB);
+                      if (type != null && type.equals("string")) {
+                          context.accumulate(n, "");
+                      } else {
+                          context.accumulate(n, o);
+                      }
+                    } else {
+                        context.accumulate(n, o); 
+                    }
                     return false;
 
 // Content, between <...> and </...>
@@ -260,7 +273,10 @@ public class XML {
 // Nested element
 
                         } else if (t == LT) {
-                            if (parse(x, o, n)) {
+                            if (parse(x, o, n, typed)) {
+                                if (typed) {
+                                  String type = (String)o.remove(TYPE_ATTRIB);
+                                }
                                 if (o.length() == 0) {
                                     context.accumulate(n, "");
                                 } else if (o.length() == 1 &&
@@ -280,6 +296,9 @@ public class XML {
         }
     }
 
+    public static JSONObject toJSONObject(String string) throws JSONException {
+        return toJSONObject(string, false);   
+    }
 
     /**
      * Convert a well-formed (but not necessarily valid) XML string into a
@@ -292,14 +311,15 @@ public class XML {
      * text may be placed in a "content" member. Comments, prologs, DTDs, and
      * <code>&lt;[ [ ]]></code> are ignored.
      * @param string The source string.
+     * @param typed if true, expects typed info in the xml
      * @return A JSONObject containing the structured data from the XML string.
      * @throws JSONException
      */
-    public static JSONObject toJSONObject(String string) throws JSONException {
+    public static JSONObject toJSONObject(String string, boolean typed) throws JSONException {
         JSONObject o = new JSONObject();
         XMLTokener x = new XMLTokener(string);
         while (x.more() && x.skipPast("<")) {
-            parse(x, o, null);
+            parse(x, o, null, typed);
         }
         return o;
     }
@@ -315,15 +335,20 @@ public class XML {
         return toString(o, null);
     }
 
+    public static String toString(Object o, String tagName)
+    throws JSONException {
+        return toString(o, tagName, false);
+    }
 
     /**
      * Convert a JSONObject into a well-formed, element-normal XML string.
      * @param o A JSONObject.
      * @param tagName The optional name of the enclosing tag.
+     * @param typed if true, adds type info to the xml
      * @return A string.
      * @throws JSONException
      */
-    public static String toString(Object o, String tagName)
+    public static String toString(Object o, String tagName, boolean typed)
             throws JSONException {
         StringBuffer b = new StringBuffer();
         int          i;
@@ -341,7 +366,11 @@ public class XML {
             if (tagName != null) {
                 b.append('<');
                 b.append(tagName);
-                b.append('>');
+                if (typed) {
+                    b.append(" " + TYPE_ATTRIB + "=\"object\">");
+                } else {
+                    b.append('>');
+                }
             }
 
 // Loop thru the keys.
@@ -379,17 +408,21 @@ public class XML {
                     ja = (JSONArray)v;
                     len = ja.length();
                     for (i = 0; i < len; i += 1) {
-                        b.append(toString(ja.get(i), k));
+                        b.append(toString(ja.get(i), k, typed));
                     }
                 } else if (v.equals("")) {
                     b.append('<');
                     b.append(k);
-                    b.append("/>");
+                    if (typed) {
+                        b.append(" " + TYPE_ATTRIB + "=\"string\"/>");
+                    } else {
+                        b.append("/>");
+                    }
 
 // Emit a new tag <k>
 
                 } else {
-                    b.append(toString(v, k));
+                    b.append(toString(v, k, typed));
                 }
             }
             if (tagName != null) {
@@ -410,14 +443,20 @@ public class XML {
             len = ja.length();
             for (i = 0; i < len; ++i) {
                 b.append(toString(
-                    ja.opt(i), (tagName == null) ? "array" : tagName));
+                    ja.opt(i), (tagName == null) ? "array" : tagName, typed));
             }
             return b.toString();
         } else {
             s = (o == null) ? "null" : escape(o.toString());
-            return (tagName == null) ? "\"" + s + "\"" :
-                (s.length() == 0) ? "<" + tagName + "/>" :
-                "<" + tagName + ">" + s + "</" + tagName + ">";
+            if (typed) {
+                return (tagName == null) ? "\"" + s + "\"" :
+                  (s.length() == 0) ? "<" + tagName + "/>" :
+                  "<" + tagName + " " + TYPE_ATTRIB + "=\"string\">" + s + "</" + tagName + ">";
+            } else {
+                return (tagName == null) ? "\"" + s + "\"" :
+                    (s.length() == 0) ? "<" + tagName + "/>" :
+                    "<" + tagName + ">" + s + "</" + tagName + ">";
+            }
         }
     }
 }
