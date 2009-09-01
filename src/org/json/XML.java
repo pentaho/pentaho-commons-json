@@ -64,6 +64,7 @@ public class XML {
 
     /** the attribute name of the JSON type if included **/
     public static final String TYPE_ATTRIB = "jsonType";
+    public static final String ARRAY_ATTRIB = "jsonIsArray";
     
     /**
      * Replace special characters with XML escapes:
@@ -244,10 +245,18 @@ public class XML {
                     // before adding, clear out TYPE_ATTRIB
                     if (typed) {
                       String type = (String)o.remove(TYPE_ATTRIB);
-                      if (type != null && type.equals("string")) {
-                          context.accumulate(n, "");
-                      } else {
-                          context.accumulate(n, o);
+                      String isArr = (String)o.remove(ARRAY_ATTRIB);
+                      if (isArr != null && isArr.equals("true")) {
+                          if (type != null && type.equals("string")) {
+                              context.append(n, "");
+                          } else {
+                              context.append(n, o);
+                          }                      } else {
+                          if (type != null && type.equals("string")) {
+                              context.accumulate(n, "");
+                          } else {
+                              context.accumulate(n, o);
+                          }
                       }
                     } else {
                         context.accumulate(n, o); 
@@ -274,16 +283,29 @@ public class XML {
 
                         } else if (t == LT) {
                             if (parse(x, o, n, typed)) {
+                                String isArr = null;
                                 if (typed) {
                                   String type = (String)o.remove(TYPE_ATTRIB);
+                                  isArr = (String)o.remove(ARRAY_ATTRIB);
                                 }
-                                if (o.length() == 0) {
-                                    context.accumulate(n, "");
-                                } else if (o.length() == 1 &&
-                                       o.opt("content") != null) {
-                                    context.accumulate(n, o.opt("content"));
+                                if (isArr != null && isArr.equals("true")) {
+                                    if (o.length() == 0) {
+                                        context.append(n, "");
+                                    } else if (o.length() == 1 &&
+                                           o.opt("content") != null) {
+                                        context.append(n, o.opt("content"));
+                                    } else {
+                                        context.append(n, o);
+                                    }
                                 } else {
-                                    context.accumulate(n, o);
+                                    if (o.length() == 0) {
+                                        context.accumulate(n, "");
+                                    } else if (o.length() == 1 &&
+                                           o.opt("content") != null) {
+                                        context.accumulate(n, o.opt("content"));
+                                    } else {
+                                        context.accumulate(n, o);
+                                    }
                                 }
                                 return false;
                             }
@@ -337,7 +359,12 @@ public class XML {
 
     public static String toString(Object o, String tagName)
     throws JSONException {
-        return toString(o, tagName, false);
+        return toString(o, tagName, false, false);
+    }
+    
+    public static String toString(Object o, String tagName, boolean typed)
+    throws JSONException {
+        return toString(o, tagName, typed, false);
     }
 
     /**
@@ -348,7 +375,7 @@ public class XML {
      * @return A string.
      * @throws JSONException
      */
-    public static String toString(Object o, String tagName, boolean typed)
+    private static String toString(Object o, String tagName, boolean typed, boolean isArray)
             throws JSONException {
         StringBuffer b = new StringBuffer();
         int          i;
@@ -367,7 +394,11 @@ public class XML {
                 b.append('<');
                 b.append(tagName);
                 if (typed) {
-                    b.append(" " + TYPE_ATTRIB + "=\"object\">");
+                    b.append(" " + TYPE_ATTRIB + "=\"object\"");
+                    if (isArray) {
+                        b.append(" " + ARRAY_ATTRIB + "=\"" + isArray + "\"");
+                    }
+                    b.append(">");
                 } else {
                     b.append('>');
                 }
@@ -408,13 +439,17 @@ public class XML {
                     ja = (JSONArray)v;
                     len = ja.length();
                     for (i = 0; i < len; i += 1) {
-                        b.append(toString(ja.get(i), k, typed));
+                        b.append(toString(ja.get(i), k, typed, true));
                     }
                 } else if (v.equals("")) {
                     b.append('<');
                     b.append(k);
                     if (typed) {
-                        b.append(" " + TYPE_ATTRIB + "=\"string\"/>");
+                        b.append(" " + TYPE_ATTRIB + "=\"string\"");
+                        if (isArray) {
+                            b.append(" " + ARRAY_ATTRIB + "=\"" + isArray + "\"");
+                        }
+                        b.append("/>");
                     } else {
                         b.append("/>");
                     }
@@ -422,7 +457,7 @@ public class XML {
 // Emit a new tag <k>
 
                 } else {
-                    b.append(toString(v, k, typed));
+                    b.append(toString(v, k, typed, false));
                 }
             }
             if (tagName != null) {
@@ -443,7 +478,7 @@ public class XML {
             len = ja.length();
             for (i = 0; i < len; ++i) {
                 b.append(toString(
-                    ja.opt(i), (tagName == null) ? "array" : tagName, typed));
+                    ja.opt(i), (tagName == null) ? "array" : tagName, typed, true));
             }
             return b.toString();
         } else {
@@ -451,7 +486,9 @@ public class XML {
             if (typed) {
                 return (tagName == null) ? "\"" + s + "\"" :
                   (s.length() == 0) ? "<" + tagName + "/>" :
-                  "<" + tagName + " " + TYPE_ATTRIB + "=\"string\">" + s + "</" + tagName + ">";
+                  "<" + tagName + " " + TYPE_ATTRIB + "=\"string\"" +
+                  ((isArray) ? " " + ARRAY_ATTRIB + "=\"" + isArray + "\"" : "" ) +
+                  ">" + s + "</" + tagName + ">";
             } else {
                 return (tagName == null) ? "\"" + s + "\"" :
                     (s.length() == 0) ? "<" + tagName + "/>" :

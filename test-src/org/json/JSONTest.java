@@ -6,6 +6,26 @@ import org.json.XML;
 import org.junit.Test;
 
 public class JSONTest {
+
+  @Test
+  public void testSingleArray() throws Exception {
+      String data = null;
+      JSONObject obj = null;
+      String xml = null;
+      JSONObject obj2 = null;
+      
+      data = "{\"cols\":[{\"id\":\"BC_OFFICES_TERRITORY\"}]}";
+      obj = new JSONObject(data);
+      xml = XML.toString(obj, "widget", true);
+      obj2 = XML.toJSONObject(xml, true);
+      Assert.assertEquals("{\"widget\":{\"cols\":[{\"id\":\"BC_OFFICES_TERRITORY\"}]}}", obj2.toString());
+      
+      data = "{\"cols\":[\"id\"]}";
+      obj = new JSONObject(data);
+      xml = XML.toString(obj, "widget", true);
+      obj2 = XML.toJSONObject(xml, true);
+      Assert.assertEquals("{\"widget\":{\"cols\":[\"id\"]}}", obj2.toString());
+  }
   
   @Test
   public void testXML() {
@@ -25,6 +45,7 @@ public class JSONTest {
       Assert.assertNotNull(obj);
       xml = XML.toString(obj, "widget", true);
       Assert.assertNotNull(xml);
+      System.out.println(xml);
       results = XML.toJSONObject(xml, true);
       jsonObj = (JSONObject)results.get("widget");
       jsonResults = jsonObj.toString();
