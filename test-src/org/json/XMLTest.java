@@ -5,6 +5,8 @@ import static junit.framework.Assert.*;
 import org.json.XML;
 import org.junit.Test;
 
+import com.sun.xml.internal.ws.util.StringUtils;
+
 public class XMLTest {
 	
 	
@@ -31,6 +33,32 @@ public class XMLTest {
 		} else {
 			fail("empty inherited object");
 		}
+		
+	}
+	
+	@Test
+	public void testStringReverseConversion() throws JSONException {
+		
+		final String STRING_PARAMETER = "string_parameter";
+		final JSONObject json = new JSONObject("{\"" + STRING_PARAMETER + "\":\"str\"}");
+
+		String strJsonOut = XML.toString(json);
+		JSONObject jsonResult = XML.toJSONObject(strJsonOut);
+		assertEquals(jsonResult.get(STRING_PARAMETER), "str");
+
+		
+	}
+	
+	@Test
+	public void testNullReverseConversion() throws JSONException {
+		
+		final String STRING_PARAMETER = "string_null_parameter";
+		final JSONObject json = new JSONObject("{\"" + STRING_PARAMETER + "\":null}");
+
+		String strJsonOut = XML.toString(json);
+		JSONObject jsonResult = XML.toJSONObject(strJsonOut);
+		assertEquals(jsonResult.get(STRING_PARAMETER), null);
+
 		
 	}
 
