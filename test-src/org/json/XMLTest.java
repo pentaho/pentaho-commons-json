@@ -5,8 +5,6 @@ import static junit.framework.Assert.*;
 import org.json.XML;
 import org.junit.Test;
 
-import com.sun.xml.internal.ws.util.StringUtils;
-
 public class XMLTest {
 	
 	
