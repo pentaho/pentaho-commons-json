@@ -51,6 +51,7 @@ SOFTWARE.
 import java.util.Iterator;
 
 
+
 /**
  * This provides static methods to convert an XML text into a JSONObject,
  * and to covert a JSONObject into an XML text.
@@ -59,7 +60,8 @@ import java.util.Iterator;
  */
 public class XML {
 
-    /** The Character '&'. */
+
+	/** The Character '&'. */
     public static final Character AMP   = new Character('&');
 
     /** The Character '''. */
@@ -89,6 +91,7 @@ public class XML {
     /** the attribute name of the JSON type if included **/
     public static final String TYPE_ATTRIB = "jsonType";
     public static final String ARRAY_ATTRIB = "jsonIsArray";
+    public static final String ISNULL_ATTRIB = "isNull";
     
     /**
      * Replace special characters with XML escapes:
@@ -267,23 +270,30 @@ public class XML {
                         throw x.syntaxError("Misshaped tag");
                     }
                     // before adding, clear out TYPE_ATTRIB
-                    if (typed) {
-                      String type = (String)o.remove(TYPE_ATTRIB);
-                      String isArr = (String)o.remove(ARRAY_ATTRIB);
-                      if (isArr != null && isArr.equals("true")) {
-                          if (type != null && type.equals("string")) {
-                              context.append(n, "");
-                          } else {
-                              context.append(n, o);
-                          }                      } else {
-                          if (type != null && type.equals("string")) {
-                              context.accumulate(n, "");
-                          } else {
-                              context.accumulate(n, o);
-                          }
-                      }
+                    String isNull = (String)o.remove(ISNULL_ATTRIB);
+                    if("true".equals(isNull)) {
+                    	context.accumulate(n, JSONObject.NULL);
                     } else {
-                        context.accumulate(n, o); 
+	                    if (typed) {
+	                      String type = (String)o.remove(TYPE_ATTRIB);
+	                      String isArr = (String)o.remove(ARRAY_ATTRIB);
+	                      
+	                      if (isArr != null && isArr.equals("true")) {
+	                          if (type != null && type.equals("string")) {
+	                              context.append(n, "");
+	                          } else {
+	                              context.append(n, o);
+	                          }                      
+	                      } else {
+	                          if (type != null && type.equals("string")) {
+	                              context.accumulate(n, "");
+	                          } else {
+	                              context.accumulate(n, o);
+	                          }
+	                      }
+	                    } else {
+	                        context.accumulate(n, o); 
+	                    }
                     }
                     return false;
 
@@ -506,16 +516,19 @@ public class XML {
             }
             return b.toString();
         } else {
-            s = (o == null) ? "null" : escape(o.toString());
+            
+            boolean valueIsNull = (o == null || o == JSONObject.NULL);
+            s = valueIsNull ? "" : escape(o.toString());
+            
             if (typed) {
                 return (tagName == null) ? "\"" + s + "\"" :
-                  (s.length() == 0) ? "<" + tagName + "/>" :
+                  (valueIsNull || s.length() == 0) ? "<" + tagName + (valueIsNull ? " " + ISNULL_ATTRIB + "=\"true\"" : "") + "/>" :
                   "<" + tagName + " " + TYPE_ATTRIB + "=\"string\"" +
                   ((isArray) ? " " + ARRAY_ATTRIB + "=\"" + isArray + "\"" : "" ) +
                   ">" + s + "</" + tagName + ">";
             } else {
                 return (tagName == null) ? "\"" + s + "\"" :
-                    (s.length() == 0) ? "<" + tagName + "/>" :
+                    (valueIsNull || s.length() == 0) ? "<" + tagName + (valueIsNull ? " " + ISNULL_ATTRIB + "=\"true\"" : "") + "/>" :
                     "<" + tagName + ">" + s + "</" + tagName + ">";
             }
         }
