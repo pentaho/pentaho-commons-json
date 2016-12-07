@@ -19,6 +19,15 @@
     <tag>HEAD</tag>
   </scm>
 
+  <licenses>
+    <license>
+      <name>The JSON License</name>
+      <url>http://json.org/license.html</url>
+      <distribution>repo</distribution>
+      <comments></comments>
+    </license>
+  </licenses>
+
   <properties>
     <junit.version>4.4</junit.version>
   </properties>
