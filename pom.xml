@@ -10,7 +10,7 @@
   </parent>
 
   <artifactId>json</artifactId>
-  <version>11.0.0.0-latest</version>
+  <version>11.0.0.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <name>Pentaho Commons JSON</name>
 
